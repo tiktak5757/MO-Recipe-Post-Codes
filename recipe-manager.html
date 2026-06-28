@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MO Recipe + Post Codes</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --accent: #e8a838;
+    --accent2: #c47f1a;
+    --text: #f0ece4;
+    --muted: #888;
+    --border: #2e2e2e;
+    --danger: #e84040;
+    --success: #3ecf8e;
+    --radius: 12px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header .logo {
+    font-size: 22px;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+  }
+  header span {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+    display: block;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+  }
+  .tab {
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* PAGES */
+  .page { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+
+  /* PHOTO UPLOAD AREA */
+  .photo-area {
+    background: var(--surface2);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .photo-area:hover { border-color: var(--accent); }
+  .photo-area img {
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
+    border-radius: calc(var(--radius) - 2px);
+    display: none;
+  }
+  .photo-area.has-photo img { display: block; }
+  .photo-area.has-photo .upload-hint { display: none; }
+  .upload-hint {
+    text-align: center;
+    padding: 20px;
+  }
+  .upload-hint .icon { font-size: 40px; margin-bottom: 8px; }
+  .upload-hint p { color: var(--muted); font-size: 14px; }
+  .upload-hint strong { color: var(--text); display: block; font-size: 15px; margin-bottom: 4px; }
+  .photo-change-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: none;
+  }
+  .photo-area.has-photo .photo-change-btn { display: block; }
+  #fileInput { display: none; }
+
+  /* FORM FIELDS */
+  .field {
+    margin-bottom: 14px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+  label .req { color: var(--accent); }
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"].error { border-color: var(--danger); }
+  .field-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 4px;
+    display: none;
+  }
+  .field-error.show { display: block; }
+
+  /* BUTTONS */
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #0f0f0f;
+  }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled {
+    background: #444;
+    color: #888;
+    cursor: not-allowed;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 999;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+
+  /* SEARCH */
+  .search-wrap {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .search-wrap input {
+    flex: 1;
+  }
+  .btn-search {
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: 8px;
+    padding: 0 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .btn-search:hover { background: var(--accent2); }
+
+  /* RESULTS */
+  .results-count {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .results-count strong { color: var(--accent); }
+
+  .recipe-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .recipe-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+  }
+  .recipe-card .no-photo {
+    width: 100%;
+    height: 120px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+  }
+  .card-body {
+    padding: 16px;
+  }
+  .card-body h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .card-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.postcode { color: var(--accent); border-color: var(--accent); background: rgba(232,168,56,0.1); }
+  .badge.date { color: var(--muted); }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-size: 15px; }
+
+  /* LOADING SPINNER */
+  .spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PROGRESS BAR */
+  .upload-progress {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin-top: 12px;
+    display: none;
+    overflow: hidden;
+  }
+  .upload-progress.show { display: block; }
+  .upload-progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  /* LIVE FEED */
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--success);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+  }
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* PASSWORD SCREEN */
+  #lockScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 30px;
+  }
+  #lockScreen .lock-icon { font-size: 52px; margin-bottom: 16px; }
+  #lockScreen h2 { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  #lockScreen p { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  #lockScreen input {
+    width: 100%;
+    max-width: 320px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 14px 16px;
+    font-size: 16px;
+    text-align: center;
+    letter-spacing: 2px;
+    outline: none;
+    margin-bottom: 12px;
+    font-family: var(--font);
+    transition: border-color 0.2s;
+  }
+  #lockScreen input:focus { border-color: var(--accent); }
+  #lockScreen input.shake {
+    border-color: var(--danger);
+    animation: shake 0.4s ease;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+  }
+  #lockScreen .lock-error { color: var(--danger); font-size: 13px; height: 18px; margin-bottom: 12px; }
+  #lockScreen button {
+    width: 100%;
+    max-width: 320px;
+    padding: 14px;
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #lockScreen button:hover { background: var(--accent2); }
+
+  /* CONFIG NOTICE */
+  .config-notice {
+    background: rgba(232,168,56,0.1);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--accent);
+    line-height: 1.6;
+  }
+  .config-notice code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+  <div class="lock-icon">🔒</div>
+  <h2>MO Recipe + Post Codes</h2>
+  <p>Enter password to continue</p>
+  <input type="password" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter') checkPw()">
+  <div class="lock-error" id="lockError"></div>
+  <button onclick="checkPw()">Unlock</button>
+</div>
+
+<header>
+  <div class="logo">🍽️</div>
+  <div>
+    <h1>MO Recipe + Post Codes</h1>
+    <span>Photo · Title · Postcode · Cloud</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('add')">📸 Add Recipe</div>
+  <div class="tab" onclick="switchTab('search')">🔍 Search</div>
+  <div class="tab" onclick="switchTab('all')">📋 All Recipes</div>
+</div>
+
+<!-- ADD RECIPE PAGE -->
+<div class="page active" id="page-add">
+  <br>
+  <div class="config-notice" id="configNotice" style="display:none">
+    ⚠️ <strong>Firebase not configured.</strong> Open the HTML file and replace the Firebase config near the top of the &lt;script&gt; with your project's config from the Firebase Console → Project Settings.
+  </div>
+
+  <p class="section-title">New Recipe</p>
+
+  <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="handleFile(event)">
+
+  <div class="photo-area" id="photoArea" onclick="triggerFile()">
+    <img id="photoPreview" src="" alt="Preview">
+    <div class="upload-hint">
+      <div class="icon">📷</div>
+      <strong>Tap to take a photo or upload</strong>
+      <p>Camera or gallery — your choice</p>
+    </div>
+    <button class="photo-change-btn" onclick="event.stopPropagation(); triggerFile()">Change Photo</button>
+  </div>
+
+  <div class="field">
+    <label>Recipe Title <span class="req">*</span></label>
+    <input type="text" id="titleInput" placeholder="e.g. Chicken Tikka Masala" oninput="clearError('title')">
+    <div class="field-error" id="titleError">Please enter a recipe title</div>
+  </div>
+
+  <div class="field">
+    <label>Post Code <span class="req">*</span></label>
+    <input type="text" id="postcodeInput" placeholder="e.g. B70 8AB" oninput="clearError('postcode')" style="text-transform:uppercase">
+    <div class="field-error" id="postcodeError">Please enter a valid postcode</div>
+  </div>
+
+  <div class="upload-progress" id="uploadProgress">
+    <div class="upload-progress-bar" id="uploadProgressBar"></div>
+  </div>
+
+  <br>
+  <button class="btn btn-primary" id="saveBtn" onclick="saveRecipe()">💾 Save Recipe to Cloud</button>
+</div>
+
+<!-- SEARCH PAGE -->
+<div class="page" id="page-search">
+  <br>
+  <p class="section-title">Search by Post Code</p>
+
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Enter postcode e.g. B70" style="text-transform:uppercase"
+      onkeydown="if(event.key==='Enter') doSearch()">
+    <button class="btn-search" onclick="doSearch()">Search</button>
+  </div>
+
+  <div id="searchResults"></div>
+</div>
+
+<!-- ALL RECIPES PAGE -->
+<div class="page" id="page-all">
+  <br>
+  <div class="live-badge"><div class="live-dot"></div> Live</div>
+  <p class="section-title">All Recipes</p>
+  <div id="allRecipes"><div class="empty"><div class="icon">⏳</div><p>Loading...</p></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE + APP SCRIPT -->
+<script type="module">
+  // ── PASSWORD ─────────────────────────────────────────────────
+  const CORRECT_PW = 'MO@MO';
+  window.checkPw = () => {
+    const val = document.getElementById('pwInput').value;
+    if (val === CORRECT_PW) {
+      document.getElementById('lockScreen').style.display = 'none';
+    } else {
+      const input = document.getElementById('pwInput');
+      const err   = document.getElementById('lockError');
+      input.classList.remove('shake');
+      void input.offsetWidth;
+      input.classList.add('shake');
+      err.textContent = 'Incorrect password. Try again.';
+      input.value = '';
+    }
+  };
+
+  // ============================================================
+  // 🔧 REPLACE THIS WITH YOUR FIREBASE CONFIG
+  // Firebase Console → Project Settings → Your Apps → Config
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyB1SCASmH9DqX0R1WFk1fBbjQWTdKAlRH0",
+    authDomain: "mo-recipe-post-codes.firebaseapp.com",
+    projectId: "mo-recipe-post-codes",
+    storageBucket: "mo-recipe-post-codes.firebasestorage.app",
+    messagingSenderId: "735342673332",
+    appId: "1:735342673332:web:214ad790eac36bab39c6e1"
+  };
+  // ============================================================
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // Check if config is still placeholder
+  if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+    document.getElementById('configNotice').style.display = 'block';
+  }
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  let selectedBase64 = '';
+
+  // ── PHOTO HANDLING ──────────────────────────────────────────
+  window.triggerFile = () => document.getElementById('fileInput').click();
+
+  window.handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Compress image to under 800KB before saving
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      selectedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('photoPreview').src = selectedBase64;
+      document.getElementById('photoArea').classList.add('has-photo');
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+
+  // ── VALIDATION ──────────────────────────────────────────────
+  window.clearError = (field) => {
+    if (field === 'title') {
+      document.getElementById('titleInput').classList.remove('error');
+      document.getElementById('titleError').classList.remove('show');
+    }
+    if (field === 'postcode') {
+      document.getElementById('postcodeInput').classList.remove('error');
+      document.getElementById('postcodeError').classList.remove('show');
+    }
+  };
+
+  function showFieldError(field, msg) {
+    const input = document.getElementById(field + 'Input');
+    const err   = document.getElementById(field + 'Error');
+    input.classList.add('error');
+    if (msg) err.textContent = msg;
+    err.classList.add('show');
+    input.focus();
+  }
+
+  function validate() {
+    let ok = true;
+    const title    = document.getElementById('titleInput').value.trim();
+    const postcode = document.getElementById('postcodeInput').value.trim();
+    if (!title) { showFieldError('title'); ok = false; }
+    if (!postcode) { showFieldError('postcode'); ok = false; }
+    return ok;
+  }
+
+  // ── SAVE RECIPE ─────────────────────────────────────────────
+  window.saveRecipe = async () => {
+    if (!validate()) return;
+
+    const title    = document.getElementById('titleInput').value.trim();
+    const postcode = document.getElementById('postcodeInput').value.trim().toUpperCase();
+    const btn      = document.getElementById('saveBtn');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+    // Show progress bar animation
+    const bar  = document.getElementById('uploadProgressBar');
+    const prog = document.getElementById('uploadProgress');
+    prog.classList.add('show');
+    bar.style.width = '60%';
+
+    try {
+      // Save to Firestore — photo stored as base64 string (no Storage needed)
+      await addDoc(collection(db, 'recipes'), {
+        title,
+        postcode,
+        photoBase64: selectedBase64,
+        createdAt: serverTimestamp()
+      });
+
+      bar.style.width = '100%';
+      setTimeout(() => { prog.classList.remove('show'); bar.style.width = '0%'; }, 400);
+
+      // Reset form
+      document.getElementById('titleInput').value = '';
+      document.getElementById('postcodeInput').value = '';
+      document.getElementById('photoPreview').src = '';
+      document.getElementById('photoArea').classList.remove('has-photo');
+      document.getElementById('fileInput').value = '';
+      selectedBase64 = '';
+
+      showToast('✅ Recipe saved!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('❌ Error: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '💾 Save Recipe to Cloud';
+    }
+  };
+
+  // ── SEARCH BY POSTCODE ──────────────────────────────────────
+  window.doSearch = async () => {
+    const raw = document.getElementById('searchInput').value.trim().toUpperCase();
+    const container = document.getElementById('searchResults');
+    if (!raw) { container.innerHTML = '<div class="empty"><div class="icon">🔎</div><p>Enter a postcode to search</p></div>'; return; }
+
+    container.innerHTML = '<div class="empty"><div class="icon"><span class="spinner"></span></div><p>Searching...</p></div>';
+
+    try {
+      // Search where postcode starts with the typed value (prefix search)
+      const q = query(
+        collection(db, 'recipes'),
+        orderBy('postcode'),
+        where('postcode', '>=', raw),
+        where('postcode', '<=', raw + '\uf8ff')
+      );
+      const snap = await getDocs(q);
+      renderResults(snap.docs, raw, container);
+    } catch (err) {
+      container.innerHTML = `<div class="empty"><p style="color:var(--danger)">Error: ${err.message}</p></div>`;
+    }
+  };
+
+  function renderResults(docs, query, container) {
+    if (docs.length === 0) {
+      container.innerHTML = `<div class="empty"><div class="icon">😕</div><p>No recipes found for "<strong>${query}</strong>"</p></div>`;
+      return;
+    }
+    container.innerHTML = `<div class="results-count">Found <strong>${docs.length}</strong> recipe${docs.length > 1 ? 's' : ''} for "${query}"</div>`;
+    docs.forEach(doc => {
+      container.appendChild(buildCard(doc.data()));
+    });
+  }
+
+  // ── ALL RECIPES (LIVE) ──────────────────────────────────────
+  const allQ = query(collection(db, 'recipes'), orderBy('createdAt', 'desc'));
+  onSnapshot(allQ, (snap) => {
+    const container = document.getElementById('allRecipes');
+    if (snap.empty) {
+      container.innerHTML = '<div class="empty"><div class="icon">📭</div><p>No recipes yet — add your first one!</p></div>';
+      return;
+    }
+    container.innerHTML = '';
+    snap.docs.forEach(doc => container.appendChild(buildCard(doc.data())));
+  }, (err) => {
+    console.error(err);
+  });
+
+  // ── CARD BUILDER ────────────────────────────────────────────
+  function buildCard(data) {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+
+    const dateStr = data.createdAt?.toDate
+      ? data.createdAt.toDate().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+      : 'Just now';
+
+    card.innerHTML = `
+      ${data.photoBase64
+        ? `<img src="${data.photoBase64}" alt="${data.title}" loading="lazy">`
+        : `<div class="no-photo">🍽️</div>`}
+      <div class="card-body">
+        <h3>${escHtml(data.title)}</h3>
+        <div class="card-meta">
+          <span class="badge postcode">📍 ${escHtml(data.postcode)}</span>
+          <span class="badge date">📅 ${dateStr}</span>
+        </div>
+      </div>
+    `;
+    return card;
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── TOAST ────────────────────────────────────────────────────
+  window.showToast = (msg, type = '') => {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  };
+
+  // ── TAB SWITCHING ────────────────────────────────────────────
+  window.switchTab = (tab) => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + tab).classList.add('active');
+    const tabs = { add: 0, search: 1, all: 2 };
+    document.querySelectorAll('.tab')[tabs[tab]].classList.add('active');
+  };
+</script>
+</body>
+</html>
