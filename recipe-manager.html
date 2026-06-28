@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MO Recipe + Post Codes</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --accent: #e8a838;
+    --accent2: #c47f1a;
+    --text: #f0ece4;
+    --muted: #888;
+    --border: #2e2e2e;
+    --danger: #e84040;
+    --success: #3ecf8e;
+    --radius: 12px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  /* LOCK */
+  #lockScreen {
+    position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; padding: 30px;
+  }
+  #lockScreen .lock-icon { font-size: 52px; margin-bottom: 16px; }
+  #lockScreen h2 { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  #lockScreen p { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  #lockScreen input {
+    width: 100%; max-width: 320px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px; color: var(--text);
+    padding: 14px 16px; font-size: 16px; text-align: center; letter-spacing: 2px;
+    outline: none; margin-bottom: 12px; font-family: var(--font); transition: border-color 0.2s;
+  }
+  #lockScreen input:focus { border-color: var(--accent); }
+  #lockScreen input.shake { border-color: var(--danger); animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)}
+    40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)}
+  }
+  #lockScreen .lock-error { color: var(--danger); font-size: 13px; height: 18px; margin-bottom: 12px; }
+  #lockScreen button {
+    width: 100%; max-width: 320px; padding: 14px; background: var(--accent);
+    color: #0f0f0f; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 20px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  header .logo { font-size: 22px; }
+  header h1 { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  header span { font-size: 12px; color: var(--muted); font-weight: 400; display: block; }
+
+  /* TABS */
+  .tabs {
+    display: flex; background: var(--surface);
+    border-bottom: 1px solid var(--border); padding: 0 4px;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 12px 14px; font-size: 13px; font-weight: 600; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* PAGES */
+  .page { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  .section-title {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;
+  }
+
+  /* PHOTO AREA */
+  .photo-area {
+    background: var(--surface2); border: 2px dashed var(--border);
+    border-radius: var(--radius); min-height: 200px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: border-color 0.2s; margin-bottom: 16px;
+    position: relative; overflow: hidden;
+  }
+  .photo-area:hover { border-color: var(--accent); }
+  .photo-area img { width: 100%; height: 240px; object-fit: cover; border-radius: calc(var(--radius) - 2px); display: none; }
+  .photo-area.has-photo img { display: block; }
+  .photo-area.has-photo .upload-hint { display: none; }
+  .upload-hint { text-align: center; padding: 20px; }
+  .upload-hint .icon { font-size: 40px; margin-bottom: 8px; }
+  .upload-hint p { color: var(--muted); font-size: 14px; }
+  .upload-hint strong { color: var(--text); display: block; font-size: 15px; margin-bottom: 4px; }
+  .photo-change-btn {
+    position: absolute; bottom: 10px; right: 10px;
+    background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; display: none;
+  }
+  .photo-area.has-photo .photo-change-btn { display: block; }
+  #fileInput, #editFileInput { display: none; }
+
+  /* FIELDS */
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  label .req { color: var(--accent); }
+  input[type="text"], input[type="password"] {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 12px 14px; font-size: 15px;
+    font-family: var(--font); outline: none; transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent); }
+  input[type="text"].error { border-color: var(--danger); }
+  .field-error { color: var(--danger); font-size: 12px; margin-top: 4px; display: none; }
+  .field-error.show { display: block; }
+
+  /* BUTTONS */
+  .btn { width: 100%; padding: 14px; border-radius: var(--radius); font-size: 16px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: #0f0f0f; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled { background: #444; color: #888; cursor: not-allowed; }
+  .btn-danger { background: var(--danger); color: white; margin-top: 10px; }
+  .btn-success { background: var(--success); color: #0f0f0f; margin-top: 10px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    padding: 12px 20px; border-radius: 30px; font-size: 14px; font-weight: 600;
+    z-index: 9998; transition: transform 0.3s ease; white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+
+  /* SEARCH */
+  .search-wrap { display: flex; gap: 10px; margin-bottom: 20px; }
+  .search-wrap input { flex: 1; }
+  .btn-search {
+    background: var(--accent); color: #0f0f0f; border: none; border-radius: 8px;
+    padding: 0 18px; font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+
+  /* CARDS */
+  .results-count { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .results-count strong { color: var(--accent); }
+  .recipe-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 16px;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .recipe-card img { width: 100%; height: 200px; object-fit: cover; }
+  .recipe-card .no-photo {
+    width: 100%; height: 100px; background: var(--surface2);
+    display: flex; align-items: center; justify-content: center; font-size: 36px;
+  }
+  .card-body { padding: 14px; }
+  .card-body h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .card-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 10px; font-size: 12px; font-weight: 600;
+  }
+  .badge.postcode { color: var(--accent); border-color: var(--accent); background: rgba(232,168,56,0.1); }
+  .badge.date { color: var(--muted); }
+  .badge.deleted { color: var(--danger); border-color: var(--danger); background: rgba(232,64,64,0.1); }
+
+  /* CARD ACTION BUTTONS */
+  .card-actions { display: flex; gap: 8px; }
+  .card-btn {
+    flex: 1; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; border: none; transition: all 0.2s;
+  }
+  .card-btn-edit { background: var(--surface2); color: var(--accent); border: 1px solid var(--accent); }
+  .card-btn-delete { background: var(--surface2); color: var(--danger); border: 1px solid var(--danger); }
+  .card-btn-restore { background: var(--surface2); color: var(--success); border: 1px solid var(--success); }
+  .card-btn-perm { background: var(--danger); color: white; }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-size: 15px; }
+
+  /* SPINNER */
+  .spinner {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* PROGRESS */
+  .upload-progress { height: 4px; background: var(--surface2); border-radius: 2px; margin-top: 12px; display: none; overflow: hidden; }
+  .upload-progress.show { display: block; }
+  .upload-progress-bar { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.3s; }
+
+  /* LIVE */
+  .live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--success); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+    z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); width: 100%; max-width: 500px;
+    max-height: 90vh; overflow-y: auto; padding: 24px;
+  }
+  .modal h2 { font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .modal-actions button { flex: 1; }
+  .btn-cancel { background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 12px; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; }
+
+  input[type="date"] {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 12px 14px; font-size: 15px;
+    font-family: var(--font); outline: none; transition: border-color 0.2s;
+    color-scheme: dark;
+  }
+  input[type="date"]:focus { border-color: var(--accent); }
+
+  /* EDIT PHOTO */
+  .edit-photo-area {
+    background: var(--surface2); border: 2px dashed var(--border);
+    border-radius: var(--radius); min-height: 140px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; margin-bottom: 14px; position: relative; overflow: hidden;
+  }
+  .edit-photo-area img { width: 100%; height: 180px; object-fit: cover; display: none; }
+  .edit-photo-area.has-photo img { display: block; }
+  .edit-photo-area.has-photo .upload-hint { display: none; }
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+  <div class="lock-icon">🔒</div>
+  <h2>MO Recipe + Post Codes</h2>
+  <p>Enter password to continue</p>
+  <input type="password" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter') checkPw()">
+  <div class="lock-error" id="lockError"></div>
+  <button onclick="checkPw()">Unlock</button>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2>✏️ Edit Recipe</h2>
+    <div class="edit-photo-area" id="editPhotoArea" onclick="document.getElementById('editFileInput').click()">
+      <img id="editPhotoPreview" src="" alt="Preview">
+      <div class="upload-hint">
+        <div class="icon">📷</div>
+        <strong>Tap to change photo</strong>
+        <p>Optional — keep existing if not changed</p>
+      </div>
+    </div>
+    <input type="file" id="editFileInput" accept="image/*" capture="environment" onchange="handleEditFile(event)">
+    <div class="field">
+      <label>Recipe Title <span class="req">*</span></label>
+      <input type="text" id="editTitle" placeholder="Recipe title">
+    </div>
+    <div class="field">
+      <label>Post Code <span class="req">*</span></label>
+      <input type="text" id="editPostcode" placeholder="e.g. B70 8AB" style="text-transform:uppercase">
+    </div>
+    <div class="field">
+      <label>Date <span class="req">*</span></label>
+      <input type="date" id="editDate">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()" id="saveEditBtn">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">🍽️</div>
+  <div>
+    <h1>MO Recipe + Post Codes</h1>
+    <span>Photo · Title · Postcode · Cloud</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('add')">📸 Add</div>
+  <div class="tab" onclick="switchTab('search')">🔍 Search</div>
+  <div class="tab" onclick="switchTab('all')">📋 All</div>
+  <div class="tab" onclick="switchTab('bin')">🗑️ Bin</div>
+</div>
+
+<!-- ADD PAGE -->
+<div class="page active" id="page-add">
+  <br>
+  <p class="section-title">New Recipe</p>
+  <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="handleFile(event)">
+  <div class="photo-area" id="photoArea" onclick="triggerFile()">
+    <img id="photoPreview" src="" alt="Preview">
+    <div class="upload-hint">
+      <div class="icon">📷</div>
+      <strong>Tap to take a photo or upload</strong>
+      <p>Camera or gallery — your choice</p>
+    </div>
+    <button class="photo-change-btn" onclick="event.stopPropagation(); triggerFile()">Change Photo</button>
+  </div>
+  <div class="field">
+    <label>Recipe Title <span class="req">*</span></label>
+    <input type="text" id="titleInput" placeholder="e.g. Chicken Tikka Masala" oninput="clearError('title')">
+    <div class="field-error" id="titleError">Please enter a recipe title</div>
+  </div>
+  <div class="field">
+    <label>Post Code <span class="req">*</span></label>
+    <input type="text" id="postcodeInput" placeholder="e.g. B70 8AB" oninput="clearError('postcode')" style="text-transform:uppercase">
+    <div class="field-error" id="postcodeError">Please enter a postcode</div>
+  </div>
+  <div class="field">
+    <label>Date <span class="req">*</span></label>
+    <input type="date" id="dateInput">
+  </div>
+  <div class="upload-progress" id="uploadProgress">
+    <div class="upload-progress-bar" id="uploadProgressBar"></div>
+  </div>
+  <br>
+  <button class="btn btn-primary" id="saveBtn" onclick="saveRecipe()">💾 Save Recipe to Cloud</button>
+</div>
+
+<!-- SEARCH PAGE -->
+<div class="page" id="page-search">
+  <br>
+  <p class="section-title">Search by Post Code</p>
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Enter postcode e.g. B70" style="text-transform:uppercase"
+      onkeydown="if(event.key==='Enter') doSearch()">
+    <button class="btn-search" onclick="doSearch()">Search</button>
+  </div>
+  <div id="searchResults"></div>
+</div>
+
+<!-- ALL PAGE -->
+<div class="page" id="page-all">
+  <br>
+  <div class="live-badge"><div class="live-dot"></div> Live</div>
+  <p class="section-title">All Recipes</p>
+  <div id="allRecipes"><div class="empty"><div class="icon">⏳</div><p>Loading...</p></div></div>
+</div>
+
+<!-- BIN PAGE -->
+<div class="page" id="page-bin">
+  <br>
+  <p class="section-title">🗑️ Recycle Bin</p>
+  <div id="binRecipes"><div class="empty"><div class="icon">⏳</div><p>Loading...</p></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ── PASSWORD ──────────────────────────────────────────────────
+  const CORRECT_PW = 'MO@MO';
+  window.checkPw = () => {
+    const val = document.getElementById('pwInput').value;
+    if (val === CORRECT_PW) {
+      document.getElementById('lockScreen').style.display = 'none';
+    } else {
+      const input = document.getElementById('pwInput');
+      input.classList.remove('shake'); void input.offsetWidth; input.classList.add('shake');
+      document.getElementById('lockError').textContent = 'Incorrect password. Try again.';
+      input.value = '';
+    }
+  };
+
+  // ── FIREBASE CONFIG ───────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyB1SCASmH9DqX0R1WFk1fBbjQWTdKAlRH0",
+    authDomain: "mo-recipe-post-codes.firebaseapp.com",
+    projectId: "mo-recipe-post-codes",
+    storageBucket: "mo-recipe-post-codes.firebasestorage.app",
+    messagingSenderId: "735342673332",
+    appId: "1:735342673332:web:214ad790eac36bab39c6e1"
+  };
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, getDocs, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // Set today's date as default
+  const todayStr = new Date().toISOString().split('T')[0];
+  document.getElementById('dateInput').value = todayStr;
+
+  let selectedBase64 = '';
+  let editBase64 = '';
+  let editDocId = '';
+  let editExistingPhoto = '';
+
+  // ── COMPRESS IMAGE ────────────────────────────────────────────
+  function compressImage(file, callback) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.7));
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+
+  // ── PHOTO HANDLING (ADD) ──────────────────────────────────────
+  window.triggerFile = () => document.getElementById('fileInput').click();
+  window.handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    compressImage(file, (b64) => {
+      selectedBase64 = b64;
+      document.getElementById('photoPreview').src = b64;
+      document.getElementById('photoArea').classList.add('has-photo');
+    });
+  };
+
+  // ── PHOTO HANDLING (EDIT) ─────────────────────────────────────
+  window.handleEditFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    compressImage(file, (b64) => {
+      editBase64 = b64;
+      document.getElementById('editPhotoPreview').src = b64;
+      document.getElementById('editPhotoArea').classList.add('has-photo');
+    });
+  };
+
+  // ── VALIDATION ────────────────────────────────────────────────
+  window.clearError = (field) => {
+    document.getElementById(field + 'Input').classList.remove('error');
+    document.getElementById(field + 'Error').classList.remove('show');
+  };
+  function showFieldError(field, msg) {
+    const input = document.getElementById(field + 'Input');
+    const err = document.getElementById(field + 'Error');
+    input.classList.add('error');
+    if (msg) err.textContent = msg;
+    err.classList.add('show');
+    input.focus();
+  }
+  function validate() {
+    let ok = true;
+    if (!document.getElementById('titleInput').value.trim()) { showFieldError('title'); ok = false; }
+    if (!document.getElementById('postcodeInput').value.trim()) { showFieldError('postcode'); ok = false; }
+    return ok;
+  }
+
+  // ── SAVE NEW RECIPE ───────────────────────────────────────────
+  window.saveRecipe = async () => {
+    if (!validate()) return;
+    const title = document.getElementById('titleInput').value.trim();
+    const postcode = document.getElementById('postcodeInput').value.trim().toUpperCase();
+    const recipeDate = document.getElementById('dateInput').value || todayStr;
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+    const bar = document.getElementById('uploadProgressBar');
+    const prog = document.getElementById('uploadProgress');
+    prog.classList.add('show'); bar.style.width = '60%';
+    try {
+      await addDoc(collection(db, 'recipes'), {
+        title, postcode, photoBase64: selectedBase64,
+        recipeDate, deleted: false, createdAt: serverTimestamp()
+      });
+      bar.style.width = '100%';
+      setTimeout(() => { prog.classList.remove('show'); bar.style.width = '0%'; }, 400);
+      document.getElementById('titleInput').value = '';
+      document.getElementById('postcodeInput').value = '';
+      document.getElementById('dateInput').value = todayStr;
+      document.getElementById('photoPreview').src = '';
+      document.getElementById('photoArea').classList.remove('has-photo');
+      document.getElementById('fileInput').value = '';
+      selectedBase64 = '';
+      showToast('✅ Recipe saved!', 'success');
+    } catch (err) {
+      showToast('❌ ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '💾 Save Recipe to Cloud';
+    }
+  };
+
+  // ── EDIT MODAL ────────────────────────────────────────────────
+  window.openEditModal = (id, title, postcode, photoBase64, recipeDate) => {
+    editDocId = id;
+    editBase64 = '';
+    editExistingPhoto = photoBase64 || '';
+    document.getElementById('editTitle').value = title;
+    document.getElementById('editPostcode').value = postcode;
+    document.getElementById('editDate').value = recipeDate || todayStr;
+    const prev = document.getElementById('editPhotoPreview');
+    const area = document.getElementById('editPhotoArea');
+    if (photoBase64) { prev.src = photoBase64; area.classList.add('has-photo'); }
+    else { prev.src = ''; area.classList.remove('has-photo'); }
+    document.getElementById('editFileInput').value = '';
+    document.getElementById('editModal').classList.add('open');
+  };
+  window.closeEditModal = () => {
+    document.getElementById('editModal').classList.remove('open');
+  };
+  window.saveEdit = async () => {
+    const title = document.getElementById('editTitle').value.trim();
+    const postcode = document.getElementById('editPostcode').value.trim().toUpperCase();
+    if (!title || !postcode) { showToast('❌ Title and postcode required', 'error'); return; }
+    const btn = document.getElementById('saveEditBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving...';
+    try {
+      const finalPhoto = editBase64 || editExistingPhoto;
+      const recipeDate = document.getElementById('editDate').value || todayStr;
+      await updateDoc(doc(db, 'recipes', editDocId), { title, postcode, photoBase64: finalPhoto, recipeDate });
+      closeEditModal();
+      showToast('✅ Recipe updated!', 'success');
+    } catch (err) {
+      showToast('❌ ' + err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '💾 Save Changes';
+    }
+  };
+
+  // ── SOFT DELETE (move to bin) ─────────────────────────────────
+  window.deleteRecipe = async (id) => {
+    if (!confirm('Move this recipe to the bin?')) return;
+    try {
+      await updateDoc(doc(db, 'recipes', id), { deleted: true, deletedAt: serverTimestamp() });
+      showToast('🗑️ Moved to bin', '');
+    } catch (err) { showToast('❌ ' + err.message, 'error'); }
+  };
+
+  // ── RESTORE ───────────────────────────────────────────────────
+  window.restoreRecipe = async (id) => {
+    try {
+      await updateDoc(doc(db, 'recipes', id), { deleted: false, deletedAt: null });
+      showToast('✅ Recipe restored!', 'success');
+    } catch (err) { showToast('❌ ' + err.message, 'error'); }
+  };
+
+  // ── PERMANENT DELETE ──────────────────────────────────────────
+  window.permDelete = async (id) => {
+    if (!confirm('Permanently delete this recipe? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'recipes', id));
+      showToast('🗑️ Permanently deleted', '');
+    } catch (err) { showToast('❌ ' + err.message, 'error'); }
+  };
+
+  // ── SEARCH ────────────────────────────────────────────────────
+  window.doSearch = async () => {
+    const raw = document.getElementById('searchInput').value.trim().toUpperCase();
+    const container = document.getElementById('searchResults');
+    if (!raw) { container.innerHTML = '<div class="empty"><div class="icon">🔎</div><p>Enter a postcode to search</p></div>'; return; }
+    container.innerHTML = '<div class="empty"><div class="icon"><span class="spinner"></span></div><p>Searching...</p></div>';
+    try {
+      const q = query(
+        collection(db, 'recipes'),
+        where('deleted', '==', false),
+        orderBy('postcode'),
+        where('postcode', '>=', raw),
+        where('postcode', '<=', raw + '\uf8ff')
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        container.innerHTML = `<div class="empty"><div class="icon">😕</div><p>No recipes found for "<strong>${raw}</strong>"</p></div>`;
+        return;
+      }
+      container.innerHTML = `<div class="results-count">Found <strong>${snap.docs.length}</strong> recipe${snap.docs.length > 1 ? 's' : ''} for "${raw}"</div>`;
+      snap.docs.forEach(d => container.appendChild(buildCard(d.id, d.data(), false)));
+    } catch (err) {
+      container.innerHTML = `<div class="empty"><p style="color:var(--danger)">Error: ${err.message}</p></div>`;
+    }
+  };
+
+  // ── LIVE ALL RECIPES ──────────────────────────────────────────
+  const allQ = query(collection(db, 'recipes'), where('deleted', '==', false), orderBy('createdAt', 'desc'));
+  onSnapshot(allQ, (snap) => {
+    const container = document.getElementById('allRecipes');
+    if (snap.empty) { container.innerHTML = '<div class="empty"><div class="icon">📭</div><p>No recipes yet!</p></div>'; return; }
+    container.innerHTML = '';
+    snap.docs.forEach(d => container.appendChild(buildCard(d.id, d.data(), false)));
+  }, err => console.error(err));
+
+  // ── LIVE BIN ──────────────────────────────────────────────────
+  const binQ = query(collection(db, 'recipes'), where('deleted', '==', true), orderBy('deletedAt', 'desc'));
+  onSnapshot(binQ, (snap) => {
+    const container = document.getElementById('binRecipes');
+    if (snap.empty) { container.innerHTML = '<div class="empty"><div class="icon">✨</div><p>Bin is empty</p></div>'; return; }
+    container.innerHTML = '';
+    snap.docs.forEach(d => container.appendChild(buildCard(d.id, d.data(), true)));
+  }, err => console.error(err));
+
+  // ── CARD BUILDER ──────────────────────────────────────────────
+  function buildCard(id, data, inBin) {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+    const dateStr = data.recipeDate
+      ? new Date(data.recipeDate + 'T00:00:00').toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+      : (data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : 'Just now');
+    const escapedTitle = escHtml(data.title);
+    const escapedPostcode = escHtml(data.postcode);
+    const escapedPhoto = (data.photoBase64 || '').replace(/"/g, '&quot;');
+    const escapedDate = escHtml(data.recipeDate || '');
+
+    const actions = inBin
+      ? `<div class="card-actions">
+           <button class="card-btn card-btn-restore" onclick="restoreRecipe('${id}')">♻️ Restore</button>
+           <button class="card-btn card-btn-perm" onclick="permDelete('${id}')">🗑️ Delete Forever</button>
+         </div>`
+      : `<div class="card-actions">
+           <button class="card-btn card-btn-edit" onclick="openEditModal('${id}', '${escapedTitle}', '${escapedPostcode}', '${escapedPhoto}', '${escapedDate}')">✏️ Edit</button>
+           <button class="card-btn card-btn-delete" onclick="deleteRecipe('${id}')">🗑️ Delete</button>
+         </div>`;
+
+    card.innerHTML = `
+      ${data.photoBase64 ? `<img src="${data.photoBase64}" alt="${escapedTitle}" loading="lazy">` : `<div class="no-photo">🍽️</div>`}
+      <div class="card-body">
+        <h3>${escapedTitle}</h3>
+        <div class="card-meta">
+          <span class="badge postcode">📍 ${escapedPostcode}</span>
+          <span class="badge date">📅 ${dateStr}</span>
+        </div>
+        ${actions}
+      </div>`;
+    return card;
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────
+  window.showToast = (msg, type = '') => {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast show ' + type;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  };
+
+  // ── TABS ──────────────────────────────────────────────────────
+  window.switchTab = (tab) => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + tab).classList.add('active');
+    const tabs = { add:0, search:1, all:2, bin:3 };
+    document.querySelectorAll('.tab')[tabs[tab]].classList.add('active');
+  };
+</script>
+</body>
+</html>
